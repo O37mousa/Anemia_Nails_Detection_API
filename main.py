@@ -1,16 +1,23 @@
 from fastapi import FastAPI
 import joblib
 import pandas as pd
+from utils.config import APP_NAME, APP_VERSION, SECRET_KEY_TOKEN
 
-app = FastAPI()
+app = FastAPI(title=APP_NAME)
 
 # Load the trained model
-model = joblib.load("anemia_model.joblib")  # Ensure the model file is in the same directory
+#   model = joblib.load("random_forest_model_nails.pkl")  # Ensure the model file is in the same directory
 
 @app.get("/")
-def home():
-    return {"message": "Anemia Detection API is running!"}
+async def home():
+    return {
+        "app_name": APP_NAME,
+        "message": "Anemia Detection API for Palm is running!"
+    }
 
+
+
+"""
 @app.post("/predict/")
 def predict(data: dict):
     try:
@@ -23,6 +30,7 @@ def predict(data: dict):
         # Convert output to human-readable format
         result = "Anemic" if prediction == 1 else "Not Anemic"
 
-        return {"anemia_prediction": result}
+        return {"anemia_detection": result}
     except Exception as e:
         return {"error": str(e)}
+"""

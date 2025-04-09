@@ -4,9 +4,9 @@ import joblib
 import xgboost as xgb
 import cv2
 import numpy as np
-from tensorflow.keras.applications.densenet import preprocess_input
-from sklearn.preprocessing import LabelEncoder, StandardScaler
-from skimage.color import rgb2lab
+from tensorflow.keras.applications.densenet import preprocess_input # type: ignore
+from sklearn.preprocessing import LabelEncoder, StandardScaler # type: ignore
+from skimage.color import rgb2lab # type: ignore
 from skimage import img_as_float
 from scipy.stats import skew, kurtosis
 
@@ -21,6 +21,13 @@ SECRET_KEY_TOKEN = os.getenv("SECRET_KEY_TOKEN")
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ARTIFACTS_FOLDER_PATH = os.path.join(BASE_DIR, "artifacts")
 
+# -------------------------
+# Load Trained Models
+# -------------------------
+rf_model = joblib.load(os.path.join(ARTIFACTS_FOLDER_PATH, "random_forest_model_nails.pkl"))
+
+
+'''
 # -------------------------
 # Preprocessing Functions
 # -------------------------
@@ -95,6 +102,6 @@ preprocessing = {
 # Load Trained Models
 # -------------------------
 # metadata_model = joblib.load(os.path.join(ARTIFACTS_FOLDER_PATH, "metadata_model.pkl"))
-color_model = joblib.load(os.path.join(ARTIFACTS_FOLDER_PATH, "color_model.pkl"))
 final_model = xgb.Booster()
 final_model.load_model(os.path.join(ARTIFACTS_FOLDER_PATH, "final_model.json"))
+'''

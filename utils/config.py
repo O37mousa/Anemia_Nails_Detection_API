@@ -4,11 +4,13 @@ import joblib
 import xgboost as xgb
 import cv2
 import numpy as np
-from tensorflow.keras.applications.densenet import preprocess_input # type: ignore
-from sklearn.preprocessing import LabelEncoder, StandardScaler # type: ignore
-from skimage.color import rgb2lab # type: ignore
+from tensorflow.keras.applications.densenet import preprocess_input
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from skimage.color import rgb2lab
 from skimage import img_as_float
 from scipy.stats import skew, kurtosis
+import warnings
+
 
 # Load environment variables
 load_dotenv(override=True)
@@ -20,11 +22,6 @@ SECRET_KEY_TOKEN = os.getenv("SECRET_KEY_TOKEN")
 # Define the base directory and artifacts folder
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ARTIFACTS_FOLDER_PATH = os.path.join(BASE_DIR, "artifacts")
-
-# -------------------------
-# Load Trained Models
-# -------------------------
-rf_model = joblib.load(os.path.join(ARTIFACTS_FOLDER_PATH, "random_forest_model_nails.pkl"))
 
 
 '''
@@ -97,7 +94,87 @@ preprocessing = {
     ###   "preprocess_metadata": preprocess_metadata,
     "extract_color_features": extract_color_features
 }
+'''
 
+def preprocess_image(img_path, target_size=(224, 224)):
+    img = cv2.imread(img_path)
+    if img is None:
+        raise FileNotFoundError(f"Image not found at path: {img_path}")
+    
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = cv2.resize(img, target_size)
+    img = img.astype(np.float32)
+    img = preprocess_input(img)
+    return img
+
+def read_upload_file(uploaded_file):
+    contents = uploaded_file.file.read()
+    np_arr = np.frombuffer(contents, np.uint8)
+    img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+    if img is None:
+        raise ValueError("Could not decode the uploaded image.")
+    return img
+
+def preprocess_uploaded_image(image, target_size=(224, 224)):
+    if image is None:
+        raise ValueError("No image data provided for preprocessing.")
+    
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    image = cv2.resize(image, target_size)
+    image = image.astype(np.float32)
+    image = preprocess_input(image)
+    return image
+
+def extract_color_features(images):
+    features = []
+    for img in images:
+        img = img_as_float(img)
+
+        if not np.isfinite(img).all():
+            raise ValueError("Image contains NaN or infinite values.")
+
+        lab = rgb2lab(img)
+        L, A, B = lab[:, :, 0], lab[:, :, 1], lab[:, :, 2]
+
+        # Descriptive statistics
+        stats = []
+        for channel in [L, A, B]:
+            flat = channel.flatten()
+            stats.extend([np.mean(flat), np.std(flat), skew(flat), kurtosis(flat)])
+
+        # Histogram features with warning suppression
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            try:
+                l_hist, _ = np.histogram(L.flatten(), bins=256, range=(0, 100), density=True)
+                a_hist, _ = np.histogram(A.flatten(), bins=256, range=(-128, 128), density=True)
+                b_hist, _ = np.histogram(B.flatten(), bins=256, range=(-128, 128), density=True)
+            except Exception as e:
+                print(f"Histogram error: {e}")
+                l_hist = a_hist = b_hist = np.zeros(256)
+
+        hist_features = np.concatenate([l_hist, a_hist, b_hist])
+        feature_vector = np.concatenate([stats, hist_features])
+        features.append(feature_vector)
+
+    return np.array(features)
+
+# Group preprocessing functions
+preprocessing = {
+    "preprocess_image": preprocess_image,
+    "read_upload_file": read_upload_file,
+    "preprocess_uploaded_image": preprocess_uploaded_image,
+    "extract_color_features": extract_color_features
+}
+
+
+# -------------------------
+# Load Trained Models
+# -------------------------
+rf_model = joblib.load(os.path.join(ARTIFACTS_FOLDER_PATH, "random_forest_model_nails.pkl"))
+
+
+'''
 # -------------------------
 # Load Trained Models
 # -------------------------

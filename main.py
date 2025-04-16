@@ -11,7 +11,7 @@ app = FastAPI(title=APP_NAME)
 async def home() -> dict:
     return {
         "app_name": APP_NAME,
-        "message": "Anemia Detection API for Palm is running!"
+        "message": "Anemia Detection API for Nails is running!"
     } 
 
 @app.post("/detect/forest", tags=["Models"], description="Detection of Anemia using RF")
